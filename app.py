@@ -59,7 +59,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📂 스마트 AI 네이머")
+st.title("📂 AI PIC 네이밍")
 
 # [함수] 전처리 및 날짜
 def preprocess_image(image):
@@ -74,7 +74,7 @@ def get_creation_date(image):
         return datetime.now().strftime('%Y%m%d')
 
 # 파일 업로드
-uploaded_file = st.file_uploader("사진을 선택하세요", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader( type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
     img = Image.open(uploaded_file)
@@ -122,3 +122,4 @@ if uploaded_file:
         mime="image/png",
         use_container_width=True
     )
+
