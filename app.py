@@ -25,7 +25,7 @@ if uploaded_file:
         with st.spinner("AI가 분석 중입니다..."):
             try:
                 # 최신 모델 사용
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-pro-flash')
                 prompt = "이 이미지의 핵심 키워드 4개를 뽑아줘. 결과는 반드시 콤마로 구분된 영문 대문자만 보내줘. 예: SEOUL,FOOD,CAFE,TRAVEL"
                 
                 response = model.generate_content([prompt, image])
@@ -63,3 +63,4 @@ if uploaded_file:
             mime="image/png"
 
         )
+
