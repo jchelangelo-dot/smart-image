@@ -8,7 +8,7 @@ import re
 import piexif
 
 # 1. 페이지 설정 및 모바일 전용 UI 커스텀
-st.set_page_config(page_title="스마트 AI 네이머", layout="centered")
+st.set_page_config(page_title="AI PIC 네이밍", layout="centered")
 
 # CSS를 사용하여 상단 제목과 여백을 극단적으로 줄입니다.
 st.markdown("""
