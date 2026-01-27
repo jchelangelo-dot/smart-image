@@ -74,7 +74,7 @@ def get_creation_date(image):
         return datetime.now().strftime('%Y%m%d')
 
 # 파일 업로드
-uploaded_file = st.file_uploader( type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("사진을 선택하세요", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
     img = Image.open(uploaded_file)
@@ -122,4 +122,5 @@ if uploaded_file:
         mime="image/png",
         use_container_width=True
     )
+
 
