@@ -27,7 +27,7 @@ if uploaded_file is not None:
     # 구분선을 넣고 이미지를 화면에 출력합니다.
     st.divider()
     st.subheader("🖼️ 업로드된 이미지")
-    st.image(image, use_container_width=True) 
+    st.image(image, use_column_width=True) 
     st.divider()
     # -----------------------
 
@@ -77,3 +77,4 @@ if uploaded_file is not None:
         if custom_name:
             final_filename = f"{datetime.now().strftime('%Y%m%d')}_{custom_name}.png"
             st.download_button("💾 저장하기", data=image, file_name=final_filename)
+
