@@ -61,4 +61,5 @@ if uploaded_file:
             data=img_byte_arr,
             file_name=new_filename,
             mime="image/png"
+
         )
