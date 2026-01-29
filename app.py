@@ -10,83 +10,71 @@ import piexif
 # 1. 페이지 설정
 st.set_page_config(page_title="스마트 네이머", layout="centered")
 
-# [핵심] 요소 겹침 및 잘림 방지를 위한 강제 스타일 적용
+# [디자인] 모바일 최적화 및 요소 간격 확보
 st.markdown("""
     <style>
-    /* 1. 전체 화면 여백 확보 및 배경 */
-    .main { background-color: #ffffff; }
-    .block-container { 
-        padding-top: 2rem !important; 
-        padding-bottom: 5rem !important; /* 하단 버튼이 가려지지 않게 여유 공간 확보 */
-        max-width: 95% !important;
-    }
+    .block-container { padding-top: 1.5rem !important; padding-bottom: 5rem !important; }
+    .main-title { font-size: 1.6rem !important; font-weight: bold; margin-bottom: 1rem; }
     
-    /* 2. 요소 간 간격 강제 부여 (Overlap 방지) */
-    div.stButton, div.stDownloadButton, div.stTextInput, div.stMultiSelect {
-        margin-top: 15px !important;
-        margin-bottom: 15px !important;
-    }
+    /* 요소 간격 확보 */
+    div.stButton, div.stDownloadButton, div.stTextInput { margin-top: 10px; margin-bottom: 10px; }
 
-    /* 3. 텍스트가 잘리지 않도록 높이 자동 조절 */
-    .stButton > button, .stDownloadButton > button {
-        height: auto !important;
-        min-height: 3.5rem !important;
-        padding: 10px !important;
-        white-space: normal !important; /* 글자가 길어도 다음 줄로 넘어가게 함 */
-        line-height: 1.2 !important;
-    }
-
-    /* 4. 파일명 박스 (잘림 방지 및 가독성) */
+    /* 파일명 표시 박스 */
     .filename-box {
-        background-color: #f8f9fa;
+        background-color: #f0f7ff;
         border: 2px solid #007AFF;
-        padding: 20px;
+        padding: 15px;
         border-radius: 10px;
         font-weight: bold;
         color: #007AFF;
-        word-break: break-all; /* 긴 파일명도 줄바꿈 처리 */
-        margin: 20px 0;
-        display: block;
-        width: 100%;
+        word-break: break-all;
+        margin: 15px 0;
     }
-
-    /* 5. 이미지 크기 고정 및 중앙 정렬 */
-    .stImage > img {
-        max-width: 100% !important;
-        height: auto !important;
-        margin-bottom: 20px;
-    }
+    
+    /* 이미지 크기 조절 */
+    .stImage > img { max-width: 100%; height: auto; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📂 AI PIC 네이밍")
+st.markdown('<div class="main-title">📂 스마트 AI 네이머</div>', unsafe_allow_html=True)
 
-# [함수] 전처리 및 날짜
+# [함수] 이미지 전처리
 def preprocess_image(image):
     return ImageEnhance.Contrast(ImageOps.grayscale(image)).enhance(2.5)
 
-def get_creation_date(image):
+# [함수] 파일명 또는 메타데이터에서 날짜 추출
+def extract_date(uploaded_file, image):
+    # 1. 파일 이름에서 날짜 형식 (YYYY-MM-DD) 검색
+    filename = uploaded_file.name
+    date_match = re.search(r'(\d{4})-(\d{2})-(\d{2})', filename)
+    
+    if date_match:
+        # 찾은 경우 YYYY.MM.DD 형식으로 반환
+        return f"{date_match.group(1)}.{date_match.group(2)}.{date_match.group(3)}"
+    
+    # 2. 파일 이름에 없으면 EXIF 메타데이터 확인
     try:
         exif_dict = piexif.load(image.info['exif'])
         date_str = exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal].decode('utf-8')
-        return datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S').strftime('%Y%m%d')
+        return datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S').strftime('%Y.%m.%d')
     except:
-        return datetime.now().strftime('%Y%m%d')
+        # 3. 모두 없으면 오늘 날짜 반환
+        return datetime.now().strftime('%Y.%m.%d')
 
 # 파일 업로드
-uploaded_file = st.file_uploader("사진을 선택하세요", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("사진을 선택하세요", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
 
 if uploaded_file:
     img = Image.open(uploaded_file)
-    detected_date = get_creation_date(img)
     
-    # 모바일에서 겹침 방지를 위해 가로 배치가 아닌 세로 배치를 권장하지만, 
-    # 일단은 간격을 넓힌 상태로 유지합니다.
+    # [핵심] 날짜 인식 적용
+    final_date_prefix = extract_date(uploaded_file, img)
+    
     st.image(img)
-    st.write(f"📅 **파일 날짜:** {detected_date}")
+    st.write(f"📅 **인식된 날짜:** {final_date_prefix}")
 
-    if st.button("🔍 이미지 분석 시작 (클릭)", use_container_width=True):
-        with st.spinner("단어를 찾는 중..."):
+    if st.button("🔍 이미지 분석 시작", use_container_width=True):
+        with st.spinner("단어를 분석 중..."):
             processed_img = preprocess_image(img)
             text = pytesseract.image_to_string(processed_img, lang='kor+eng', config='--psm 11')
             words = re.findall(r'[가-힣a-zA-Z0-9]{2,}', text)
@@ -94,33 +82,33 @@ if uploaded_file:
         st.toast("분석 완료!")
 
     if 'keywords' in st.session_state and st.session_state.keywords:
-        st.write("▼ 아래에서 키워드를 선택하세요")
-        selected = st.pills("추천 키워드", st.session_state.keywords, selection_mode="multi")
+        st.write("▼ 키워드 선택")
+        selected = st.pills("키워드", st.session_state.keywords, selection_mode="multi", label_visibility="collapsed")
         st.session_state.selected_list = selected
 
     st.write("---")
-    custom_name = st.text_input("📝 직접 이름 입력 (선택)", placeholder="내용을 입력해주세요")
+    custom_name = st.text_input("📝 직접 이름 입력", placeholder="추가 내용을 입력하세요")
 
-    # 파일명 조합
+    # 파일명 조합 (YYYY.MM.DD_ 형식 적용)
     selected_list = st.session_state.get('selected_list', [])
     selected_str = "_".join(selected_list).replace(" ", "")
-    name_parts = [detected_date]
+    
+    name_parts = [final_date_prefix] # 인식된 날짜 (YYYY.MM.DD)
     if selected_str: name_parts.append(selected_str)
     if custom_name: name_parts.append(custom_name.strip().replace(" ", "_"))
     
-    final_name = f"{'_'.join(name_parts)}.png"
+    # 부품들을 '_'로 잇고 확장자 추가
+    final_filename = f"{'_'.join(name_parts)}.png"
 
-    # 최종 파일명 박스
-    st.markdown(f'<div class="filename-box">{final_name}</div>', unsafe_allow_html=True)
+    # 최종 파일명 강조
+    st.markdown(f'<div class="filename-box">{final_filename}</div>', unsafe_allow_html=True)
     
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     st.download_button(
-        label="💾 위 이름으로 내 폰에 저장",
+        label="💾 이 이름으로 저장하기",
         data=buf.getvalue(),
-        file_name=final_name,
+        file_name=final_filename,
         mime="image/png",
         use_container_width=True
     )
-
-
