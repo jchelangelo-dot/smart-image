@@ -18,7 +18,7 @@ st.markdown("""
 st.title("📂 초정밀 AI 파일 네이머")
 
 # API 키 설정 (보안을 위해 입력창 제공)
-api_key = st.sidebar.text_input("Gemini API Key를 입력하세요", type="password")
+api_key = st.sidebar.text_input("AIzaSyBFgIMOPpV2qUraV83fgfkxDSUtw_k_6dM", type="password")
 if api_key:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
@@ -78,3 +78,4 @@ if uploaded_file and api_key:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     st.download_button("💾 내 폰에 저장하기", data=buf.getvalue(), file_name=final_name, use_container_width=True)
+
