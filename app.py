@@ -1,37 +1,30 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import io
 
-# 1. API 설정
+# 1. API 키 확인
 if "GEMINI_API_KEY" not in st.secrets:
-    st.error("Streamlit Cloud 설정(Secrets)에서 GEMINI_API_KEY를 먼저 등록해주세요.")
+    st.error("Secrets에 키가 없습니다!")
     st.stop()
 
+# 2. 가장 안전한 설정법
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
-# 2. 모델 설정 (최신 라이브러리 기준 표준 호출)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-st.title("📂 스마트 AI 네이머")
+st.title("구글 AI 테스트")
 
-uploaded_file = st.file_uploader("이미지 선택", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("사진을 올려주세요", type=["jpg", "png"])
 
 if uploaded_file:
     img = Image.open(uploaded_file)
     st.image(img)
-
-    if st.button("🚀 AI 분석 시작", use_container_width=True):
+    
+    if st.button("AI야, 이 사진 뭐야?"):
         try:
-            with st.spinner("AI가 분석 중입니다..."):
-                # 최신 방식의 분석 요청
-                response = model.generate_content([
-                    "이 이미지의 핵심 키워드 5개를 콤마(,)로 구분해서 단어만 답해줘.", 
-                    img
-                ])
-                st.success(f"추천 키워드: {response.text}")
-                st.session_state.keywords = [w.strip() for w in response.text.split(',')]
+            # 이미지 용량 최적화 후 전송
+            img.thumbnail((512, 512))
+            response = model.generate_content(["이 사진을 한 단어로 설명해줘", img])
+            st.success(f"결과: {response.text}")
         except Exception as e:
-            # 여전히 에러가 난다면 상세 내용을 보여줌
-            st.error(f"분석 중 오류 발생: {str(e)}")
-            st.info("requirements.txt의 라이브러리 버전이 0.7.2 이상인지 확인해주세요.")
+            st.error(f"에러 발생: {e}")
+            st.info("이 에러가 또 404라면 앱을 삭제 후 재생성해야 합니다.")
