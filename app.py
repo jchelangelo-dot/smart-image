@@ -29,40 +29,35 @@ st.markdown("""
     .stImage > img { max-width: 100%; border-radius: 12px; margin: 0 auto; display: block; }
     .stButton > button { height: 3.5rem; border-radius: 15px; font-weight: bold; background-color: #007AFF; color: white; }
     </style>
-    """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True) # 오타 수정 완료
 
 st.markdown('<div class="main-title">📂 스마트 AI 네이머</div>', unsafe_allow_html=True)
 
-# 2. Secrets에서 API 키 로드 및 설정
+# 2. Secrets에서 API 키 로드
 try:
-    # st.secrets를 통해 안전하게 키를 가져옵니다.
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    # 최신 안정화 모델인 gemini-1.5-flash를 사용합니다.
+    # 최신 모델 설정
     model = genai.GenerativeModel('gemini-1.5-flash')
-except KeyError:
-    st.error("⚠️ Streamlit Settings > Secrets에 'GEMINI_API_KEY'를 먼저 설정해 주세요.")
-    st.stop()
 except Exception as e:
-    st.error(f"⚠️ 설정 오류: {e}")
+    st.error("⚠️ Streamlit Secrets에 'GEMINI_API_KEY'를 설정해 주세요.")
     st.stop()
 
-# [함수] 날짜 인식 로직 강화
+# 날짜 인식 함수 강화 (파일명 우선)
 def extract_date(uploaded_file, image):
     filename = uploaded_file.name
-    # 파일명에서 2026-01-27 또는 20260127 등 패턴 찾기
+    # 파일명에서 YYYY-MM-DD 또는 YYYYMMDD 패턴 찾기
     date_match = re.search(r'(\d{4})[-_.]?(\d{2})[-_.]?(\d{2})', filename)
     if date_match:
         return f"{date_match.group(1)}.{date_match.group(2)}.{date_match.group(3)}"
     try:
-        # 사진 촬영 정보(EXIF) 확인
         exif_dict = piexif.load(image.info['exif'])
         date_str = exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal].decode('utf-8')
         return datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S').strftime('%Y.%m.%d')
     except:
         return datetime.now().strftime('%Y.%m.%d')
 
-# 3. 파일 업로드 섹션
+# 3. 메인 기능
 uploaded_file = st.file_uploader("", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
 
 if uploaded_file:
@@ -72,24 +67,22 @@ if uploaded_file:
     st.image(img)
     st.write(f"📅 인식된 날짜: **{date_prefix}**")
 
-    # AI 분석 버튼
     if st.button("🚀 AI 키워드 분석 시작", use_container_width=True):
-        with st.spinner("AI가 이미지를 정밀 분석 중입니다..."):
+        with st.spinner("이미지를 분석하고 있습니다..."):
             try:
-                # 최신 API 호출 방식 적용
+                # AI에게 이미지 분석 요청
                 response = model.generate_content([
-                    "이 이미지의 핵심 내용을 파악해서 파일 이름으로 쓰기 좋은 단어 5개를 콤마(,)로 구분해서 답해줘. 단어만 보내줘.", 
+                    "이 이미지의 핵심 내용을 분석해서 파일 이름으로 쓰기 좋은 단어 5개를 콤마(,)로 구분해서 알려줘. 단어만 출력해줘.", 
                     img
                 ])
                 # 결과 텍스트 정제
-                words = [w.strip() for w in response.text.replace('\n', '').split(',') if len(w.strip()) >= 1]
+                raw_text = response.text.replace('\n', '')
+                words = [w.strip() for w in raw_text.split(',') if len(w.strip()) >= 1]
                 st.session_state.keywords = words
                 st.toast("분석 완료!")
             except Exception as e:
-                st.error("분석 중 오류가 발생했습니다. API 키나 모델 설정을 확인해 주세요.")
-                st.info(f"상세 에러: {e}")
+                st.error(f"분석 실패: {e}")
 
-    # 키워드 선택 (Pills)
     if 'keywords' in st.session_state:
         st.write("▼ 파일명에 포함할 단어를 선택하세요")
         selected = st.pills("키워드", st.session_state.keywords, selection_mode="multi", label_visibility="collapsed")
@@ -109,10 +102,8 @@ if uploaded_file:
     
     final_name = f"{'_'.join(name_parts)}.png"
     
-    # 가독성 높은 결과창
     st.markdown(f'<div class="filename-box">{final_name}</div>', unsafe_allow_html=True)
     
-    # 다운로드 버튼
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     st.download_button(
