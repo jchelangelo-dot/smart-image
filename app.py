@@ -6,47 +6,31 @@ import io
 import re
 import piexif
 
-# 1. 페이지 설정 및 디자인 (가독성 최적화)
+# 1. 페이지 설정 및 디자인 수정 (오타 unsafe_allow_html로 정정)
 st.set_page_config(page_title="스마트 AI 네이머", layout="centered")
-
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem !important; padding-bottom: 5rem !important; }
     .main-title { font-size: 1.6rem !important; font-weight: bold; margin-bottom: 1rem; }
-    /* 파일명 표시 박스 */
-    .filename-box {
-        background-color: #f0f7ff;
-        border: 2px solid #007AFF;
-        padding: 15px;
-        border-radius: 10px;
-        font-weight: bold;
-        color: #007AFF;
-        font-size: 1.1rem;
-        word-break: break-all;
-        margin: 15px 0;
-        text-align: center;
-    }
+    .filename-box { background-color: #f0f7ff; border: 2px solid #007AFF; padding: 15px; border-radius: 10px; font-weight: bold; color: #007AFF; font-size: 1.1rem; word-break: break-all; margin: 15px 0; text-align: center; }
     .stImage > img { max-width: 100%; border-radius: 12px; margin: 0 auto; display: block; }
-    .stButton > button { height: 3.5rem; border-radius: 15px; font-weight: bold; background-color: #007AFF; color: white; }
     </style>
-    """, unsafe_allow_html=True) # 오타 수정 완료
+    """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-title">📂 스마트 AI 네이머</div>', unsafe_allow_html=True)
 
-# 2. Secrets에서 API 키 로드
+# 2. Secrets에서 API 키 가져오기
 try:
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    # 최신 모델 설정
+    # [핵심 수정] 모델 이름에서 'models/'를 빼고 'gemini-1.5-flash'만 사용
     model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
-    st.error("⚠️ Streamlit Secrets에 'GEMINI_API_KEY'를 설정해 주세요.")
+    st.error("⚠️ Streamlit Secrets 설정을 확인해주세요.")
     st.stop()
 
-# 날짜 인식 함수 강화 (파일명 우선)
 def extract_date(uploaded_file, image):
     filename = uploaded_file.name
-    # 파일명에서 YYYY-MM-DD 또는 YYYYMMDD 패턴 찾기
     date_match = re.search(r'(\d{4})[-_.]?(\d{2})[-_.]?(\d{2})', filename)
     if date_match:
         return f"{date_match.group(1)}.{date_match.group(2)}.{date_match.group(3)}"
@@ -57,7 +41,7 @@ def extract_date(uploaded_file, image):
     except:
         return datetime.now().strftime('%Y.%m.%d')
 
-# 3. 메인 기능
+# 파일 업로드
 uploaded_file = st.file_uploader("", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
 
 if uploaded_file:
@@ -67,49 +51,38 @@ if uploaded_file:
     st.image(img)
     st.write(f"📅 인식된 날짜: **{date_prefix}**")
 
+    # AI 분석 시작
     if st.button("🚀 AI 키워드 분석 시작", use_container_width=True):
         with st.spinner("이미지를 분석하고 있습니다..."):
             try:
-                # AI에게 이미지 분석 요청
+                # AI에게 이미지 전달 및 분석
                 response = model.generate_content([
-                    "이 이미지의 핵심 내용을 분석해서 파일 이름으로 쓰기 좋은 단어 5개를 콤마(,)로 구분해서 알려줘. 단어만 출력해줘.", 
+                    "이 이미지에서 파일명으로 쓰기 좋은 핵심 단어 5개를 콤마(,)로 구분해서 답해줘. 예: 거실, 인테리어, 가구", 
                     img
                 ])
                 # 결과 텍스트 정제
-                raw_text = response.text.replace('\n', '')
-                words = [w.strip() for w in raw_text.split(',') if len(w.strip()) >= 1]
+                words = [w.strip() for w in response.text.replace('\n', '').split(',') if len(w.strip()) >= 1]
                 st.session_state.keywords = words
                 st.toast("분석 완료!")
             except Exception as e:
-                st.error(f"분석 실패: {e}")
+                # 에러 발생 시 상세 정보 출력
+                st.error(f"분석 실패: {str(e)}")
 
     if 'keywords' in st.session_state:
-        st.write("▼ 파일명에 포함할 단어를 선택하세요")
-        selected = st.pills("키워드", st.session_state.keywords, selection_mode="multi", label_visibility="collapsed")
+        selected = st.pills("키워드 선택", st.session_state.keywords, selection_mode="multi")
         st.session_state.selected_list = selected
 
     st.write("---")
-    custom_name = st.text_input("📝 직접 이름 추가 (선택)", placeholder="예: 거실_인테리어")
+    custom_name = st.text_input("📝 직접 이름 추가", placeholder="예: 인테리어_아이디어")
 
-    # 4. 최종 파일명 조합
     selected_list = st.session_state.get('selected_list', [])
     name_parts = [date_prefix]
-    
-    if selected_list:
-        name_parts.append("_".join(selected_list).replace(" ", ""))
-    if custom_name:
-        name_parts.append(custom_name.strip().replace(" ", "_"))
+    if selected_list: name_parts.append("_".join(selected_list).replace(" ", ""))
+    if custom_name: name_parts.append(custom_name.strip().replace(" ", "_"))
     
     final_name = f"{'_'.join(name_parts)}.png"
-    
     st.markdown(f'<div class="filename-box">{final_name}</div>', unsafe_allow_html=True)
     
     buf = io.BytesIO()
     img.save(buf, format="PNG")
-    st.download_button(
-        label="💾 이 이름으로 이미지 저장",
-        data=buf.getvalue(),
-        file_name=final_name,
-        mime="image/png",
-        use_container_width=True
-    )
+    st.download_button("💾 파일 저장하기", data=buf.getvalue(), file_name=final_name, use_container_width=True)
